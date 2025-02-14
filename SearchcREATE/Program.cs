@@ -120,7 +120,7 @@ public class NestedListBuilder
 
     /// <summary>
     /// Получение примечания, в случае если ко-во равно 0
-    /// В далнящем дополнительная логика, метод дорабатывается
+    /// В дальнейщем дополнительная логика, метод дорабатывается
     /// </summary>
     /// <returns></returns>
     private string _GetRemark()
@@ -141,7 +141,7 @@ public class NestedListBuilder
         {
             string count = _api.asGetArtCountText();
             string designation = _api.asGetArtDesignation();
-            string remark = "";
+
             if (!_switchdocumentation) {
                 if (CheckDesignator(designation))
                 {
@@ -153,16 +153,17 @@ public class NestedListBuilder
 
             if (count.Split()[0] == "0")
             {
-                remark = _GetRemark();
+                count =  $" определяется примечанием : {_GetRemark()}";
             }
-            
+
             ChildRow row = new ChildRow
             {
                 ArtID = _api.asGetArtID(),
                 Designation = designation,
                 Name = _api.asGetArtName(),
-                Count = count,
+                Count = count +  $" <b>Позиция {_api.asGetPosition()}</b>",
             };
+
             Console.WriteLine($"Буферизуем строку: {row.Designation} - {row.Name} (ID: {row.ArtID}, Кол-во: {row.Count})");
             rows.Add(row);
             _api.asNext();
