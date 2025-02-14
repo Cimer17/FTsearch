@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Diagnostics;
 using S4;
 
 /// <summary>
@@ -140,6 +141,7 @@ public class NestedListBuilder
         {
             string count = _api.asGetArtCountText();
             string designation = _api.asGetArtDesignation();
+            string remark = "";
             if (!_switchdocumentation) {
                 if (CheckDesignator(designation))
                 {
@@ -148,9 +150,10 @@ public class NestedListBuilder
                     continue;
                 }
             }
-            
-            if (count.Split()[0] == "0") {
-                Console.WriteLine(_GetRemark());
+
+            if (count.Split()[0] == "0")
+            {
+                remark = _GetRemark();
             }
             
             ChildRow row = new ChildRow
@@ -158,7 +161,7 @@ public class NestedListBuilder
                 ArtID = _api.asGetArtID(),
                 Designation = designation,
                 Name = _api.asGetArtName(),
-                Count = count
+                Count = count,
             };
             Console.WriteLine($"Буферизуем строку: {row.Designation} - {row.Name} (ID: {row.ArtID}, Кол-во: {row.Count})");
             rows.Add(row);
@@ -289,8 +292,16 @@ class Program
 
         Console.WriteLine("Генерация HTML-вывода...");
         string html = builder.GenerateHtml(rootItem);
-        File.WriteAllText("structure.html", html);
-        Console.WriteLine("HTML-файл 'structure.html' создан.");
+
+        string path = @"C:\HtmlOr";
+        if (!Directory.Exists(path))
+        {
+            Directory.CreateDirectory(path);
+        }
+        string filePath = Path.Combine(path, "structure.html");
+        File.WriteAllText(filePath, html);
+        Process.Start(filePath);
+        Console.WriteLine("HTML-файл 'structure.html' создан!");
 
         Console.WriteLine("Программа завершена. Для закрытия нажмите любую клавишу...");
         Console.ReadLine();
