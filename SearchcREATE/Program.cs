@@ -41,10 +41,12 @@ public class NestedListBuilder
 {
     private TS4App _api;
     private int _uniqueIdCounter = 0; // Глобальный счетчик для уникальных id
+    private bool _switchdocumentation; // Переключатель, показывать документацию или нет
 
-    public NestedListBuilder(TS4App intermechAPI)
+    public NestedListBuilder(TS4App intermechAPI, bool switchdocumentation)
     {
         _api = intermechAPI;
+        _switchdocumentation = switchdocumentation;
     }
 
     /// <summary>
@@ -66,18 +68,65 @@ public class NestedListBuilder
     /// Строит дерево состава изделия по заданному ArtID.
     /// Для корневого элемента получаем базовые данные отдельно.
     /// </summary>
-    public Item BuildNestedList(int artId, string inputDesignation)
+    public Item BuildNestedList(int artId, string inputDesignation, string name)
     {
-        string rootDesignation = inputDesignation; 
-        Console.WriteLine($"Корневой элемент: {rootDesignation}");
-        Item rootItem = new Item(rootDesignation, "", "1");
+        Console.WriteLine($"Корневой элемент: {inputDesignation}");
+        Item rootItem = new Item(inputDesignation, name, "1");
         Console.WriteLine($"Открываем структуру для ArtID: {artId}");
+        
         _api.OpenArticleStructure(artId);
         BuildSubItems(rootItem);
         _api.CloseArticleStructure();
+        
         return rootItem;
     }
 
+    /// <summary>
+    /// Метод проверки принадлежности Обьекта (СП, ТУ и т. п.)
+    /// Если обьект принадлежит => true
+    /// </summary>
+    private bool CheckDesignator(string name) {
+        if (name is null) {
+            return false;
+        }
+        string[] names = name.Split();
+        if (names.Length > 1) {
+            switch (names[1])
+            {
+                case "ТУ":
+                case "Э3":
+                case "ГЧ":
+                case "ТО":
+                case "МЭ":
+                case "СБ":
+                case "ЗИ":
+                case "ЗИ1":
+                case "ТО-ЛУ":
+                case "ПС-ЛУ":
+                case "ЗИ1-ЛУ":
+                case "ЗИ-ЛУ":
+                case "ПС":
+                case "ПЭЗ":
+                case "ВС":
+                    return true;
+                default:
+                    return false;
+            }
+        }
+        return false;
+    }
+
+
+    /// <summary>
+    /// Получение примечания, в случае если ко-во равно 0
+    /// В далнящем дополнительная логика, метод дорабатывается
+    /// </summary>
+    /// <returns></returns>
+    private string _GetRemark()
+    {
+        return _api.asGetArtRemark();
+    }
+    
     /// <summary>
     /// Рекурсивно обходит текущую открытую структуру.
     /// Сначала буферизуем все строки, затем для каждого открываем его структуру.
@@ -89,12 +138,27 @@ public class NestedListBuilder
         _api.asFirst(); // Устанавливаем указатель на первую строку
         while (_api.asEof() == 0)
         {
+            string count = _api.asGetArtCountText();
+            string designation = _api.asGetArtDesignation();
+            if (!_switchdocumentation) {
+                if (CheckDesignator(designation))
+                {
+                    Console.WriteLine("Похоже на документацию, исключаю из дерева...");
+                    _api.asNext();
+                    continue;
+                }
+            }
+            
+            if (count.Split()[0] == "0") {
+                Console.WriteLine(_GetRemark());
+            }
+            
             ChildRow row = new ChildRow
             {
                 ArtID = _api.asGetArtID(),
-                Designation = _api.asGetArtDesignation(),
+                Designation = designation,
                 Name = _api.asGetArtName(),
-                Count = _api.asGetArtCountText()
+                Count = count
             };
             Console.WriteLine($"Буферизуем строку: {row.Designation} - {row.Name} (ID: {row.ArtID}, Кол-во: {row.Count})");
             rows.Add(row);
@@ -113,18 +177,6 @@ public class NestedListBuilder
                 BuildSubItems(subItem);
                 _api.CloseArticleStructure();
             }
-        }
-    }
-
-    /// <summary>
-    /// Рекурсивно выводит дерево состава в консоль с отступами
-    /// </summary>
-    public void PrintNestedList(Item item, int indent = 0)
-    {
-        Console.WriteLine($"{new string(' ', indent)}{item.Designation} - {item.Name} (Количество: {item.Count})");
-        foreach (var subItem in item.SubItems)
-        {
-            PrintNestedList(subItem, indent + 2);
         }
     }
 
@@ -202,29 +254,38 @@ public class NestedListBuilder
     }
 }
 
+/// <summary>
+/// Основной класс программы
+/// </summary>
 class Program
 {
     static TS4App S4App = new TS4App();
+    static bool _switchdocumentation;
 
+    /// <summary>
+    /// Точка запуска
+    /// </summary>
     public static void Main(string[] args)
     {
         Console.WriteLine("Начало выполнения программы.");
-        NestedListBuilder builder = new NestedListBuilder(S4App);
+        Console.WriteLine("Включать документацию (ТУ, СБ, ГЧ и т.п.)? д - да, н - нет :");
+        string settings = Console.ReadLine().ToLower();
+        _switchdocumentation = settings != "н";
+        
+        NestedListBuilder builder = new NestedListBuilder(S4App, _switchdocumentation);
         builder.ConnectSearch();
-
-        // Для search (работа с выделенным обьектом)
+        
+        Console.WriteLine("Считывания информации об изделии...");
         var selecet = S4App.GetSelectedItems();
         selecet.FirstSelected(); 
         int artID = S4App.ActiveArtID;
         S4App.OpenArticle(artID);
         string designation = S4App.GetArticleDesignation();
+        string nameart = S4App.GetArticleName();
         S4App.CloseArticle();
 
         Console.WriteLine("Построение дерева состава...");
-        // Передаём исходное обозначение для корневого узла, если специальные методы не доступны
-        Item rootItem = builder.BuildNestedList(artID, designation);
-        Console.WriteLine("Дерево состава построено. Вывод в консоль:");
-        builder.PrintNestedList(rootItem);
+        Item rootItem = builder.BuildNestedList(artID, designation, nameart);
 
         Console.WriteLine("Генерация HTML-вывода...");
         string html = builder.GenerateHtml(rootItem);
