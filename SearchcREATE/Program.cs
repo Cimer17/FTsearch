@@ -212,31 +212,6 @@ class Program
         NestedListBuilder builder = new NestedListBuilder(S4App);
         builder.ConnectSearch();
 
-        //Console.Write("Введите обозначение изделия: ");
-        //string designation = Console.ReadLine();
-        //Console.WriteLine($"Поиск изделия по обозначению: {designation}");
-        //int artID = S4App.GetArtID_ByDesignation(designation);
-        //if (artID <= 0)
-        //{
-        //    Console.WriteLine("Изделие не найдено по обозначению. Пробуем через документ...");
-        //    int docID = S4App.GetDocID_ByDesignation(designation);
-        //    if (docID > 0)
-        //    {
-        //        artID = S4App.GetArtID_ByDocID(docID);
-        //        Console.WriteLine($"Нашли ArtID через документ: {artID}");
-        //    }
-        //    else
-        //    {
-        //        Console.WriteLine("Не удалось найти документ.");
-        //        return;
-        //    }
-        //}
-        //else
-        //{
-        //    Console.WriteLine($"Найден ArtID: {artID}");
-        //}
-
-
         // Для search (работа с выделенным обьектом)
         var selecet = S4App.GetSelectedItems();
         selecet.FirstSelected(); 
@@ -244,8 +219,6 @@ class Program
         S4App.OpenArticle(artID);
         string designation = S4App.GetArticleDesignation();
         S4App.CloseArticle();
-
-
 
         Console.WriteLine("Построение дерева состава...");
         // Передаём исходное обозначение для корневого узла, если специальные методы не доступны
